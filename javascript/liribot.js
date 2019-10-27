@@ -43,14 +43,14 @@ switch (command) {
             console.log("Liri Says: I'm sorry, but you'll have to tell me what to search for.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         } else {
-            movieThis();
+            // movieThis();
         }
-        console.log("You said movie-this.");
+        // console.log("You said movie-this.");
         break;
     case "do-what-it-says":
         // Read from the random.txt file
         // doThis();
-        console.log("You said do-what-it-says.");
+        // console.log("You said do-what-it-says.");
         break;
     default:
         console.log("You have not entered a valid command. Please try again.");
@@ -117,8 +117,8 @@ function formatConcertData(theEvents) {
     } else {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         console.log("Upcoming events for your search, \"" + searchQuery + "\":");
-
-
+        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        console.log("\nVenue Name-------------------|Venue Location---------------|Event Time-------------------|Line Up----------------------")
         // for (var i = 0; i < theEvents.length; i++) {
         //     console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         //     console.log("Venue Name: " + theEvents[i].venue.name);
