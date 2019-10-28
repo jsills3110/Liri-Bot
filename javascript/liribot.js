@@ -4,13 +4,11 @@ var moment = require("moment"); // Loading the moment node library
 var axios = require("axios"); // Loading the axios node library
 var keys = require("./keys.js"); // Loading the API keys from a separate file
 var fs = require("fs"); // Loading the file system library
-var readline = require("readline"); // Loading the readline library
 
 var spotify = new Spotify(keys.spotify);
 
 var command = process.argv[2]; // Grab the command from the user input
 var searchQuery;
-var done = true;
 
 // If there is anything else after the first user argument, grab it.
 if (process.argv.length > 3) {
@@ -18,10 +16,7 @@ if (process.argv.length > 3) {
 }
 
 function doCommand(theCommand, theSearch) {
-    done = false;
     // Perform an action based on the command from the user.
-    // console.log("doCommand command: " + theCommand);
-    // console.log("doCommand searchQuery: " + theSearch);
     switch (theCommand) {
         // Search for concerts
         case "concert-this":
@@ -73,7 +68,6 @@ function concertThis(theBandSearch) {
             console.log("Liri Says: I'm sorry, \"" + theBandSearch + "\" doesn't seem to exist. Try rewording your search.");
             console.log("For more information, you can find the error logs in logs.txt.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            done = true;
             // If the band does exist in the Bands in Town database...
         } else {
             // Search for their events using their band name.
@@ -85,15 +79,12 @@ function concertThis(theBandSearch) {
                 url: queryURL,
             }).then(function (response) {
                 formatConcertData(response.data, theBandSearch);
-                done = true;
             }).catch(function (err) {
                 axiosError(err);
-                done = true;
             });
         }
     }).catch(function (err) {
         axiosError(err);
-        done = true;
     });
 }
 
@@ -143,12 +134,10 @@ function spotifyThis(theSongSearch) {
             console.log("Liri Says: Hmmmm, there's something wrong with that search. Try again.");
             console.log("For more information, you can find the error logs in logs.txt.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            done = true;
             // ********* Send this to log.txt *************
             return console.log(err);
         }
         formatSpotifyData(response.tracks.items, theSongSearch);
-        done = true;
     });
 }
 
@@ -197,10 +186,8 @@ function movieThis(theMovieSearch) {
         url: queryURL,
     }).then(function (response) {
         formatMovieData(response.data, theMovieSearch);
-        done = true;
     }).catch(function (err) {
         axiosError(err);
-        done = true;
     });
 }
 
@@ -270,27 +257,11 @@ function formatMovieData(theMovie, theMovieQuery) {
 }
 
 function doThis() {
-    // const readInterface = readline.createInterface({
-    //     input: fs.createReadStream("random.txt"),
-    //     console: false
-    // });
-
-    // readInterface.on('line', function (line) {
-    //     console.log(line);
-    //     command = line.substring(0, line.indexOf(","));
-    //     searchQuery = line.substring(line.indexOf(",") + 1);
-    //     doCommand();
-    // });
     var thingsToDo = [];
     fs.readFileSync('random.txt', 'utf-8').split(/\r?\n/).forEach(function (line) {
-        // console.log(line);
         thingsToDo.push(line);
     });
 
-    // var i = 0;
-    // while (i < thingsToDo.length) {
-        
-    // }
     for (var i = 0; i < thingsToDo.length; i++) {
         // console.log(thingsToDo[i]);
         textCommand = thingsToDo[i].substring(0, thingsToDo[i].indexOf(","));
