@@ -3,6 +3,7 @@ var Spotify = require("node-spotify-api"); // Loading the Spotify node library
 var moment = require("moment"); // Loading the moment node library
 var axios = require("axios"); // Loading the axios node library
 var keys = require("./keys.js"); // Loading the API keys from a separate file
+var fs = require("fs"); // Loading the file system library
 
 var spotify = new Spotify(keys.spotify);
 
@@ -15,8 +16,8 @@ if (process.argv.length > 3) {
 }
 
 switch (command) {
+    // Search for concerts
     case "concert-this":
-        // Search for concerts
         if (searchQuery === undefined) {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
             console.log("Liri Says: I'm sorry, but you'll have to tell me what band to search for.");
@@ -25,8 +26,8 @@ switch (command) {
             concertThis();
         }
         break;
+    // Search for artists
     case "spotify-this-song":
-        // Search for artists
         if (searchQuery === undefined) {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
             console.log("Liri Says: I'm sorry, but you'll have to tell me what song to search for.");
@@ -36,19 +37,12 @@ switch (command) {
         }
         // console.log("You said spotify-this-song.");
         break;
+    // Search for movies
     case "movie-this":
-        // Search for movies
-        if (searchQuery === undefined) {
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, but you'll have to tell me what to search for.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        } else {
-            // movieThis();
-        }
-        // console.log("You said movie-this.");
+        movieThis();
         break;
+    // Read from the random.txt file
     case "do-what-it-says":
-        // Read from the random.txt file
         // doThis();
         // console.log("You said do-what-it-says.");
         break;
@@ -65,68 +59,32 @@ function concertThis() {
     }).then(function (response) {
         // console.log(response);
         formatConcertData(response.data);
-    }).catch(function (error) {
-        if (error.response) {
-            // The request was made and the server responded with a status code
-            // that falls out of the range of 2xx
-
-            if (error.response.status === 404) {
-                console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-                console.log("Liri Says: I'm sorry, I couldn't find that band. Try again.");
-                console.log("For more information, you can find the error logs in logs.txt.");
-                console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            }
-
-            // console.log(error.response.data);
-            // console.log(error.response.status);
-            // console.log(error.response.headers);
-        } else if (error.request) {
-            // The request was made but no response was received
-            // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-            // http.ClientRequest in node.js
-
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, it looks like Bands in Town is unreachable. Try again later.");
-            console.log("For more information, you can find the error logs in logs.txt.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-
-            // console.log(error.request);
-        } else {
-            // Something happened in setting up the request that triggered an Error
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: Hmmmm, there's something wrong with that search. Perhaps try rewording it?");
-            console.log("For more information, you can find the error logs in logs.txt.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-
-            // console.log('Error', error.message);
-        }
-        // console.log(error.config);
+    }).catch(function(err) {
+        axiosError(err);
     });
 }
 
 function formatConcertData(theEvents) {
     if (theEvents === "\n{warn=Not found}\n") {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: I'm sorry, I couldn't find that band. Try again.");
+        console.log("Liri Says: I'm sorry, I couldn't find \"" + searchQuery + "\". Try again.");
         console.log("For more information, you can find the error logs in logs.txt.");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     } else if (theEvents.length < 1) {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: This band doesn't have any upcoming events!");
+        console.log("Liri Says: \"" + searchQuery + "\" doesn't have any upcoming events!");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     } else {
-        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         console.log("Upcoming events for your search, \"" + searchQuery + "\":");
-        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-        console.log("\nVenue Name-------------------|Venue Location---------------|Event Time-------------------|Line Up----------------------")
-        // for (var i = 0; i < theEvents.length; i++) {
-        //     console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        //     console.log("Venue Name: " + theEvents[i].venue.name);
-        //     var location = theEvents[i].venue.city + ", " + theEvents[i].venue.region + ", " + theEvents[i].venue.country;
-        //     console.log("Venue Location: " + location);
-        //     console.log("Event Time: " + theEvents[i].datetime);
-        //     console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        // }
+        for (var i = 0; i < theEvents.length; i++) {
+            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+            console.log("Venue Name: " + theEvents[i].venue.name);
+            var location = theEvents[i].venue.city + ", " + theEvents[i].venue.region + ", " + theEvents[i].venue.country;
+            console.log("Venue Location: " + location);
+            console.log("Event Time: " + theEvents[i].datetime);
+        }
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     }
 }
 
@@ -136,9 +94,91 @@ function spotifyThis() {
         query: searchQuery
     }, function (err, response) {
         if (err) {
-            return console.log("An error occurred: " + err);
+            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            console.log("Liri Says: Hmmmm, there's something wrong with that search. Try again.");
+            console.log("For more information, you can find the error logs in logs.txt.");
+            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
+            return console.log(err);
         }
-        console.log(response.tracks.items);
+
+        formatSpotifyData(response.tracks.items);
     });
 }
 
+function formatSpotifyData(theSongs) {
+    if (theSongs.length < 1) {
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        console.log("Liri Says: \"" + searchQuery + "\" didn't result in any songs from Spotify!");
+        console.log("You should try listening to \"The Sign\" by Ace of Base.");
+        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+    } else {
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        console.log("Results for your search, \"" + searchQuery + "\":");
+        for (var i = 0; i < theSongs.length; i++) {
+            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+            console.log("Song Name: " + theSongs[i].name);
+            console.log("Artist: " + theSongs[i].artists[0].name);
+            console.log("Album: " + theSongs[i].album.name);
+            console.log("Preview Link: " + theSongs[i].preview_url);
+        }
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+    }
+}
+
+function movieThis() {
+    if (searchQuery === undefined) {
+        // Return Mr.Nobody
+    } else {
+        axios({
+            method: "get",
+            url: queryURL,
+        }).then(function (response) {
+            // console.log(response);
+            formatConcertData(response.data);
+        }).catch(function(err) {
+            axiosError(err);
+        });
+    }
+}
+
+function axiosError(error) {
+    // The request was made and the server responded with a status code that falls out of the range of 2xx.
+    if (error.response) {
+        if (error.response.status === 404) {
+            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            console.log("Liri Says: I'm sorry, I couldn't find \"" + searchQuery + "\". Try again.");
+            console.log("For more information, you can find the error logs in logs.txt.");
+            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        } else {
+            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            console.log("Liri Says: I'm sorry, but the search returned a bad status code. Try again or reword your search.");
+            console.log("For more information, you can find the error logs in logs.txt.");
+            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        }
+
+        // console.log(error.response.data);
+        // console.log(error.response.status);
+        // console.log(error.response.headers);
+
+        // The request was made but no response was received `error.request` is an instance of XMLHttpRequest in 
+        // the browser and an instance of http.ClientRequest in node.js
+    } else if (error.request) {
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        console.log("Liri Says: I'm sorry, it looks like the API I tried to use is unreachable. Try again later.");
+        console.log("For more information, you can find the error logs in logs.txt.");
+        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
+        // console.log(error.request);
+
+        // Something happened in setting up the request that triggered an Error
+    } else {
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        console.log("Liri Says: Hmmmm, there's something wrong with that search. Perhaps try rewording it?");
+        console.log("For more information, you can find the error logs in logs.txt.");
+        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
+        // console.log('Error', error.message);
+    }
+    // console.log(error.config);
+}
