@@ -4,55 +4,64 @@ var moment = require("moment"); // Loading the moment node library
 var axios = require("axios"); // Loading the axios node library
 var keys = require("./keys.js"); // Loading the API keys from a separate file
 var fs = require("fs"); // Loading the file system library
+var readline = require("readline"); // Loading the readline library
 
 var spotify = new Spotify(keys.spotify);
 
 var command = process.argv[2]; // Grab the command from the user input
 var searchQuery;
+var done = true;
 
 // If there is anything else after the first user argument, grab it.
 if (process.argv.length > 3) {
     searchQuery = process.argv.slice(3).join(" ");
 }
 
-// Perform an action based on the command from the user.
-switch (command) {
-    // Search for concerts
-    case "concert-this":
-        if (searchQuery === undefined) {
+function doCommand(theCommand, theSearch) {
+    done = false;
+    // Perform an action based on the command from the user.
+    // console.log("doCommand command: " + theCommand);
+    // console.log("doCommand searchQuery: " + theSearch);
+    switch (theCommand) {
+        // Search for concerts
+        case "concert-this":
+            if (theSearch === undefined) {
+                console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+                console.log("Liri Says: I'm sorry, but you'll have to tell me what band to search for.");
+                console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            } else {
+                concertThis(theSearch);
+            }
+            break;
+        // Search for artists
+        case "spotify-this-song":
+            if (theSearch === undefined) {
+                console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+                console.log("Liri Says: I'm sorry, but you'll have to tell me what song to search for.");
+                console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            } else {
+                spotifyThis(theSearch);
+            }
+            break;
+        // Search for movies
+        case "movie-this":
+            movieThis(theSearch);
+            break;
+        // Read from the random.txt file
+        case "do-what-it-says":
+            doThis();
+            break;
+        default:
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, but you'll have to tell me what band to search for.");
+            console.log("Liri Says: I'm sorry, I don't understand that. Please try again.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        } else {
-            concertThis();
-        }
-        break;
-    // Search for artists
-    case "spotify-this-song":
-        if (searchQuery === undefined) {
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, but you'll have to tell me what song to search for.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        } else {
-            spotifyThis();
-        }
-        break;
-    // Search for movies
-    case "movie-this":
-        movieThis();
-        break;
-    // Read from the random.txt file
-    case "do-what-it-says":
-        // doThis();
-        break;
-    default:
-        console.log("You have not entered a valid command. Please try again.");
+    }
 }
 
 // Query the Bands in Town API with the user's search query.
-function concertThis() {
+function concertThis(theBandSearch) {
     // First find the band, then search for events.
-    var bandURL = "https://rest.bandsintown.com/artists/" + searchQuery + "?app_id=codingbootcamp";
+    var bandURL = "https://rest.bandsintown.com/artists/" + theBandSearch + "?app_id=codingbootcamp";
 
     axios({
         method: "get",
@@ -61,47 +70,51 @@ function concertThis() {
         // If the band doesn't exist in the Bands in Town database...
         if (response.data === '') {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, \"" + searchQuery + "\" doesn't seem to exist. Try rewording your search.");
+            console.log("Liri Says: I'm sorry, \"" + theBandSearch + "\" doesn't seem to exist. Try rewording your search.");
             console.log("For more information, you can find the error logs in logs.txt.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        // If the band does exist in the Bands in Town database...
+            done = true;
+            // If the band does exist in the Bands in Town database...
         } else {
             // Search for their events using their band name.
-            searchQuery = response.data.name;
-            var queryURL = "https://rest.bandsintown.com/artists/" + searchQuery + "/events?app_id=codingbootcamp";
+            theBandSearch = response.data.name;
+            var queryURL = "https://rest.bandsintown.com/artists/" + theBandSearch + "/events?app_id=codingbootcamp";
 
             axios({
                 method: "get",
                 url: queryURL,
             }).then(function (response) {
-                formatConcertData(response.data);
+                formatConcertData(response.data, theBandSearch);
+                done = true;
             }).catch(function (err) {
                 axiosError(err);
+                done = true;
             });
         }
     }).catch(function (err) {
         axiosError(err);
+        done = true;
     });
 }
 
 // Format the data received from the Bands in Town API.
-function formatConcertData(theEvents) {
+function formatConcertData(theEvents, theBandName) {
     // Bands in Town couldn't find a band...
     if (theEvents === "\n{warn=Not found}\n") {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: I'm sorry, I couldn't find \"" + searchQuery + "\". Try again.");
+        console.log("Liri Says: I'm sorry, I couldn't find \"" + theBandName + "\". Try again.");
         console.log("For more information, you can find the error logs in logs.txt.");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         // If Bands in Town doesn't have any events for a band...
     } else if (theEvents.length < 1) {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: " + searchQuery + " doesn't have any upcoming events!");
+        console.log("Liri Says: " + theBandName + " doesn't have any upcoming events!");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         // If we received a response with data from Bands in Town...
     } else {
         // console.log(theEvents);
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-        console.log("Upcoming events for " + searchQuery + ":");
+        console.log("Upcoming events for " + theBandName + ":");
         for (var i = 0; i < theEvents.length; i++) {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
             console.log("Venue Name: " + theEvents[i].venue.name);
@@ -119,10 +132,10 @@ function formatConcertData(theEvents) {
 }
 
 // Query the Spotify API with the user's search query.
-function spotifyThis() {
+function spotifyThis(theSongSearch) {
     spotify.search({
         type: "track",
-        query: searchQuery
+        query: theSongSearch
     }, function (err, response) {
         // If we receive an error from the Spotify API...
         if (err) {
@@ -130,72 +143,81 @@ function spotifyThis() {
             console.log("Liri Says: Hmmmm, there's something wrong with that search. Try again.");
             console.log("For more information, you can find the error logs in logs.txt.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            done = true;
             // ********* Send this to log.txt *************
             return console.log(err);
         }
-        formatSpotifyData(response.tracks.items);
+        formatSpotifyData(response.tracks.items, theSongSearch);
+        done = true;
     });
 }
 
 // Format the data received from the Spotify API.
-function formatSpotifyData(theSongs) {
+function formatSpotifyData(theSongs, theSongQuery) {
     // If Spotify couldn't find any songs with the search...
     if (theSongs.length < 1) {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: \"" + searchQuery + "\" didn't result in any songs from Spotify!");
+        console.log("Liri Says: \"" + theSongQuery + "\" didn't result in any songs from Spotify!");
         console.log("You should try listening to \"The Sign\" by Ace of Base.");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         // If we received a response with data from Spotify...
     } else {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-        console.log("Results for your search, \"" + searchQuery + "\":");
+        console.log("Results for your search, \"" + theSongQuery + "\":");
         for (var i = 0; i < theSongs.length; i++) {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
             console.log("Song Name: " + theSongs[i].name);
             console.log("Artist: " + theSongs[i].artists[0].name);
             console.log("Album: " + theSongs[i].album.name);
-            console.log("Preview Link: " + theSongs[i].preview_url);
+            // If there is no preview link available...
+            if (theSongs[i].preview_url === null) {
+                console.log("Preview Link: No preview available on Spotify.");
+            } else {
+                console.log("Preview Link: " + theSongs[i].preview_url);
+            }
         }
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
     }
 }
 
 // Query the OMDB API with the user's search query.
-function movieThis() {
+function movieThis(theMovieSearch) {
     var queryURL;
 
     // If the user didn't search for anything, search for Mr. Nobody.
-    if (searchQuery === undefined) {
+    if (theMovieSearch === undefined) {
         queryURL = "http://www.omdbapi.com/?apikey=trilogy&t=mr.nobody";
         // Otherwise, search for the user's query.
     } else {
-        queryURL = "http://www.omdbapi.com/?apikey=trilogy&t=" + searchQuery;
+        queryURL = "http://www.omdbapi.com/?apikey=trilogy&t=" + theMovieSearch;
     }
 
     axios({
         method: "get",
         url: queryURL,
     }).then(function (response) {
-        formatMovieData(response.data);
+        formatMovieData(response.data, theMovieSearch);
+        done = true;
     }).catch(function (err) {
         axiosError(err);
+        done = true;
     });
 }
 
 // Format the data received from the OMDB API.
-function formatMovieData(theMovie) {
+function formatMovieData(theMovie, theMovieQuery) {
     // If OMDB returns a "False" response...
     if (theMovie.Response === "False") {
         // If the error was that the moview was not found...
         if (theMovie.Error === "Movie not found!") {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: \"" + searchQuery + "\" didn't result in any movies from OMDB!");
+            console.log("Liri Says: \"" + theMovieQuery + "\" didn't result in any movies from OMDB!");
             console.log("Try rewording your search.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
             // If there was some other error...
         } else {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: \"" + searchQuery + "\" resulted in an error from OMDB.");
+            console.log("Liri Says: \"" + theMovieQuery + "\" resulted in an error from OMDB.");
             console.log("Try rewording your search. For more information, you can find the error logs in logs.txt.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         }
@@ -220,7 +242,7 @@ function formatMovieData(theMovie) {
         if (searchQuery === undefined) {
             console.log("Liri Says: You didn't search for a movie title, so here's a suggestion...");
         } else {
-            console.log("Result for your search, \"" + searchQuery + "\":");
+            console.log("Result for your search, \"" + theMovieQuery + "\":");
         }
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
@@ -244,6 +266,44 @@ function formatMovieData(theMovie) {
         console.log("Plot: " + theMovie.Plot);
         console.log("Actor(s): " + theMovie.Actors);
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+    }
+}
+
+function doThis() {
+    // const readInterface = readline.createInterface({
+    //     input: fs.createReadStream("random.txt"),
+    //     console: false
+    // });
+
+    // readInterface.on('line', function (line) {
+    //     console.log(line);
+    //     command = line.substring(0, line.indexOf(","));
+    //     searchQuery = line.substring(line.indexOf(",") + 1);
+    //     doCommand();
+    // });
+    var thingsToDo = [];
+    fs.readFileSync('random.txt', 'utf-8').split(/\r?\n/).forEach(function (line) {
+        // console.log(line);
+        thingsToDo.push(line);
+    });
+
+    // var i = 0;
+    // while (i < thingsToDo.length) {
+        
+    // }
+    for (var i = 0; i < thingsToDo.length; i++) {
+        // console.log(thingsToDo[i]);
+        textCommand = thingsToDo[i].substring(0, thingsToDo[i].indexOf(","));
+        // console.log(textCommand);
+        textSearchQuery = thingsToDo[i].substring(thingsToDo[i].indexOf(",") + 1);
+        // console.log(textSearchQuery);
+        var promise = new Promise(function (resolve, reject) {
+            doCommand(textCommand, textSearchQuery);
+            resolve('Geeks For Geeks');
+        });
+        promise.then(function (successMessage) {
+            console.log(successMessage);
+        });
     }
 }
 
@@ -288,3 +348,5 @@ function axiosError(error) {
     }
     // console.log(error.config);
 }
+
+doCommand(command, searchQuery);
