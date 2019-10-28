@@ -15,6 +15,7 @@ if (process.argv.length > 3) {
     searchQuery = process.argv.slice(3).join(" ");
 }
 
+// Perform an action based on the command from the user.
 switch (command) {
     // Search for concerts
     case "concert-this":
@@ -35,7 +36,6 @@ switch (command) {
         } else {
             spotifyThis();
         }
-        // console.log("You said spotify-this-song.");
         break;
     // Search for movies
     case "movie-this":
@@ -44,43 +44,73 @@ switch (command) {
     // Read from the random.txt file
     case "do-what-it-says":
         // doThis();
-        // console.log("You said do-what-it-says.");
         break;
     default:
         console.log("You have not entered a valid command. Please try again.");
 }
 
+// Query the Bands in Town API with the user's search query.
 function concertThis() {
-    var queryURL = "https://rest.bandsintown.com/artists/" + searchQuery + "/events?app_id=codingbootcamp";
+    // First find the band, then search for events.
+    var bandURL = "https://rest.bandsintown.com/artists/" + searchQuery + "?app_id=codingbootcamp";
 
     axios({
         method: "get",
-        url: queryURL,
+        url: bandURL,
     }).then(function (response) {
-        // console.log(response);
-        formatConcertData(response.data);
-    }).catch(function(err) {
+        // If the band doesn't exist in the Bands in Town database...
+        if (response.data === '') {
+            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            console.log("Liri Says: I'm sorry, \"" + searchQuery + "\" doesn't seem to exist. Try rewording your search.");
+            console.log("For more information, you can find the error logs in logs.txt.");
+            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        // If the band does exist in the Bands in Town database...
+        } else {
+            // Search for their events using their band name.
+            searchQuery = response.data.name;
+            var queryURL = "https://rest.bandsintown.com/artists/" + searchQuery + "/events?app_id=codingbootcamp";
+
+            axios({
+                method: "get",
+                url: queryURL,
+            }).then(function (response) {
+                formatConcertData(response.data);
+            }).catch(function (err) {
+                axiosError(err);
+            });
+        }
+    }).catch(function (err) {
         axiosError(err);
     });
 }
 
+// Format the data received from the Bands in Town API.
 function formatConcertData(theEvents) {
+    // Bands in Town couldn't find a band...
     if (theEvents === "\n{warn=Not found}\n") {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         console.log("Liri Says: I'm sorry, I couldn't find \"" + searchQuery + "\". Try again.");
         console.log("For more information, you can find the error logs in logs.txt.");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        // If Bands in Town doesn't have any events for a band...
     } else if (theEvents.length < 1) {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: \"" + searchQuery + "\" doesn't have any upcoming events!");
+        console.log("Liri Says: " + searchQuery + " doesn't have any upcoming events!");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        // If we received a response with data from Bands in Town...
     } else {
+        // console.log(theEvents);
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-        console.log("Upcoming events for your search, \"" + searchQuery + "\":");
+        console.log("Upcoming events for " + searchQuery + ":");
         for (var i = 0; i < theEvents.length; i++) {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
             console.log("Venue Name: " + theEvents[i].venue.name);
-            var location = theEvents[i].venue.city + ", " + theEvents[i].venue.region + ", " + theEvents[i].venue.country;
+            var location = theEvents[i].venue.city;
+            // If the venue has a region, add it to the location. Otherwise, omit it because it is just ''.
+            if (theEvents[i].venue.region !== '') {
+                location += ", " + theEvents[i].venue.region;
+            }
+            location += ", " + theEvents[i].venue.country;
             console.log("Venue Location: " + location);
             console.log("Event Time: " + theEvents[i].datetime);
         }
@@ -88,30 +118,34 @@ function formatConcertData(theEvents) {
     }
 }
 
+// Query the Spotify API with the user's search query.
 function spotifyThis() {
     spotify.search({
         type: "track",
         query: searchQuery
     }, function (err, response) {
+        // If we receive an error from the Spotify API...
         if (err) {
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
             console.log("Liri Says: Hmmmm, there's something wrong with that search. Try again.");
             console.log("For more information, you can find the error logs in logs.txt.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-
+            // ********* Send this to log.txt *************
             return console.log(err);
         }
-
         formatSpotifyData(response.tracks.items);
     });
 }
 
+// Format the data received from the Spotify API.
 function formatSpotifyData(theSongs) {
+    // If Spotify couldn't find any songs with the search...
     if (theSongs.length < 1) {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         console.log("Liri Says: \"" + searchQuery + "\" didn't result in any songs from Spotify!");
         console.log("You should try listening to \"The Sign\" by Ace of Base.");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        // If we received a response with data from Spotify...
     } else {
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         console.log("Results for your search, \"" + searchQuery + "\":");
@@ -126,22 +160,94 @@ function formatSpotifyData(theSongs) {
     }
 }
 
+// Query the OMDB API with the user's search query.
 function movieThis() {
+    var queryURL;
+
+    // If the user didn't search for anything, search for Mr. Nobody.
     if (searchQuery === undefined) {
-        // Return Mr.Nobody
+        queryURL = "http://www.omdbapi.com/?apikey=trilogy&t=mr.nobody";
+        // Otherwise, search for the user's query.
     } else {
-        axios({
-            method: "get",
-            url: queryURL,
-        }).then(function (response) {
-            // console.log(response);
-            formatConcertData(response.data);
-        }).catch(function(err) {
-            axiosError(err);
-        });
+        queryURL = "http://www.omdbapi.com/?apikey=trilogy&t=" + searchQuery;
+    }
+
+    axios({
+        method: "get",
+        url: queryURL,
+    }).then(function (response) {
+        formatMovieData(response.data);
+    }).catch(function (err) {
+        axiosError(err);
+    });
+}
+
+// Format the data received from the OMDB API.
+function formatMovieData(theMovie) {
+    // If OMDB returns a "False" response...
+    if (theMovie.Response === "False") {
+        // If the error was that the moview was not found...
+        if (theMovie.Error === "Movie not found!") {
+            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            console.log("Liri Says: \"" + searchQuery + "\" didn't result in any movies from OMDB!");
+            console.log("Try rewording your search.");
+            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            // If there was some other error...
+        } else {
+            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            console.log("Liri Says: \"" + searchQuery + "\" resulted in an error from OMDB.");
+            console.log("Try rewording your search. For more information, you can find the error logs in logs.txt.");
+            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        }
+        // If we received a "True" response from OMDB...
+    } else {
+
+        // Retrieve the IMDB and Rotten Tomatoes ratings, if they are part of the response.
+        var imdb;
+        var rottenTomatoes;
+        if (theMovie.Ratings.length > -1) {
+            for (var i = 0; i < theMovie.Ratings.length; i++) {
+                if (theMovie.Ratings[i].Source === "Internet Movie Database") {
+                    imdb = theMovie.Ratings[i].Value;
+                } else if (theMovie.Ratings[i].Source === "Rotten Tomatoes") {
+                    rottenTomatoes = theMovie.Ratings[i].Value;
+                }
+            }
+        }
+
+        // Console log the response from Liri
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        if (searchQuery === undefined) {
+            console.log("Liri Says: You didn't search for a movie title, so here's a suggestion...");
+        } else {
+            console.log("Result for your search, \"" + searchQuery + "\":");
+        }
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+
+        // Console log the movie information
+        console.log("Title: " + theMovie.Title);
+        console.log("Release Year: " + theMovie.Year);
+        // If the IMDB rating was not found...
+        if (imdb === undefined) {
+            console.log("IMDB Rating: No rating was found.");
+        } else {
+            console.log("IMDB Rating: " + imdb);
+        }
+        // If the Rotten Tomatoes rating was not found...
+        if (rottenTomatoes === undefined) {
+            console.log("Rotten Tomatoes Rating: No rating was found.");
+        } else {
+            console.log("Rotten Tomatoes Rating: " + rottenTomatoes);
+        }
+        console.log("Produced In: " + theMovie.Country);
+        console.log("Language(s): " + theMovie.Language);
+        console.log("Plot: " + theMovie.Plot);
+        console.log("Actor(s): " + theMovie.Actors);
+        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     }
 }
 
+// Handle the error response from Axios.
 function axiosError(error) {
     // The request was made and the server responded with a status code that falls out of the range of 2xx.
     if (error.response) {
