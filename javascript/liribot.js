@@ -9,6 +9,9 @@ var spotify = new Spotify(keys.spotify);
 
 var command = process.argv[2]; // Grab the command from the user input
 var searchQuery;
+var responsesArray = [];
+var newlineDivider = "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+var divider = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
 // If there is anything else after the first user argument, grab it.
 if (process.argv.length > 3) {
@@ -21,9 +24,15 @@ function doCommand(theCommand, theSearch) {
         // Search for concerts
         case "concert-this":
             if (theSearch === undefined) {
-                console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-                console.log("Liri Says: I'm sorry, but you'll have to tell me what band to search for.");
-                console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+                var liri = "Liri Says: I'm sorry, but you'll have to tell me what band to search for.";
+                
+                responsesArray.push(newlineDivider);
+                responsesArray.push(liri);
+                responsesArray.push(divider);
+                
+                console.log(newlineDivider);
+                console.log(liri);
+                console.log(divider);
             } else {
                 concertThis(theSearch);
             }
@@ -31,9 +40,15 @@ function doCommand(theCommand, theSearch) {
         // Search for artists
         case "spotify-this-song":
             if (theSearch === undefined) {
-                console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-                console.log("Liri Says: I'm sorry, but you'll have to tell me what song to search for.");
-                console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+                var liri = "Liri Says: I'm sorry, but you'll have to tell me what song to search for.";
+                
+                responsesArray.push(newlineDivider);
+                responsesArray.push(liri);
+                responsesArray.push(divider);
+                
+                console.log(newlineDivider);
+                console.log(liri);
+                console.log(divider);
             } else {
                 spotifyThis(theSearch);
             }
@@ -103,7 +118,6 @@ function formatConcertData(theEvents, theBandName) {
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         // If we received a response with data from Bands in Town...
     } else {
-        // console.log(theEvents);
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         console.log("Upcoming events for " + theBandName + ":");
         for (var i = 0; i < theEvents.length; i++) {
@@ -116,7 +130,7 @@ function formatConcertData(theEvents, theBandName) {
             }
             location += ", " + theEvents[i].venue.country;
             console.log("Venue Location: " + location);
-            console.log("Event Time: " + theEvents[i].datetime);
+            console.log("Event Time: " + moment(theEvents[i].datetime).format('MM/DD/YYYY'));
         }
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
     }
@@ -226,7 +240,7 @@ function formatMovieData(theMovie, theMovieQuery) {
 
         // Console log the response from Liri
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-        if (searchQuery === undefined) {
+        if (theMovieQuery === undefined) {
             console.log("Liri Says: You didn't search for a movie title, so here's a suggestion...");
         } else {
             console.log("Result for your search, \"" + theMovieQuery + "\":");
@@ -263,18 +277,17 @@ function doThis() {
     });
 
     for (var i = 0; i < thingsToDo.length; i++) {
-        // console.log(thingsToDo[i]);
         textCommand = thingsToDo[i].substring(0, thingsToDo[i].indexOf(","));
-        // console.log(textCommand);
         textSearchQuery = thingsToDo[i].substring(thingsToDo[i].indexOf(",") + 1);
-        // console.log(textSearchQuery);
-        var promise = new Promise(function (resolve, reject) {
-            doCommand(textCommand, textSearchQuery);
-            resolve('Geeks For Geeks');
-        });
-        promise.then(function (successMessage) {
-            console.log(successMessage);
-        });
+
+        if (textSearchQuery[0] === "\"") {
+            textSearchQuery = textSearchQuery.substring(1);
+        }
+        if (textSearchQuery[textSearchQuery.length - 1] === "\"") {
+            textSearchQuery = textSearchQuery.substring(0, textSearchQuery.length - 1);
+        }
+
+        doCommand(textCommand, textSearchQuery);
     }
 }
 
