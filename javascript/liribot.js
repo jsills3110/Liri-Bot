@@ -11,7 +11,9 @@ var command = process.argv[2]; // Grab the command from the user input
 var searchQuery;
 var responsesArray = [];
 var newlineDivider = "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+var doubleNewlineDivider = "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 var divider = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+var moreInfo = "For more information, you can find the error logs in logs.txt.";
 
 // If there is anything else after the first user argument, grab it.
 if (process.argv.length > 3) {
@@ -25,14 +27,17 @@ function doCommand(theCommand, theSearch) {
         case "concert-this":
             if (theSearch === undefined) {
                 var liri = "Liri Says: I'm sorry, but you'll have to tell me what band to search for.";
-                
+
                 responsesArray.push(newlineDivider);
                 responsesArray.push(liri);
                 responsesArray.push(divider);
-                
+
+                printToFile();
+
                 console.log(newlineDivider);
                 console.log(liri);
                 console.log(divider);
+
             } else {
                 concertThis(theSearch);
             }
@@ -41,11 +46,13 @@ function doCommand(theCommand, theSearch) {
         case "spotify-this-song":
             if (theSearch === undefined) {
                 var liri = "Liri Says: I'm sorry, but you'll have to tell me what song to search for.";
-                
+
                 responsesArray.push(newlineDivider);
                 responsesArray.push(liri);
                 responsesArray.push(divider);
-                
+
+                printToFile();
+
                 console.log(newlineDivider);
                 console.log(liri);
                 console.log(divider);
@@ -62,9 +69,17 @@ function doCommand(theCommand, theSearch) {
             doThis();
             break;
         default:
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, I don't understand that. Please try again.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            var liri = "Liri Says: I'm sorry, I don't understand that. Please try again.";
+
+            responsesArray.push(newlineDivider);
+            responsesArray.push(liri);
+            responsesArray.push(divider);
+
+            printToFile();
+
+            console.log(newlineDivider);
+            console.log(liri);
+            console.log(divider);
     }
 }
 
@@ -79,10 +94,20 @@ function concertThis(theBandSearch) {
     }).then(function (response) {
         // If the band doesn't exist in the Bands in Town database...
         if (response.data === '') {
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, \"" + theBandSearch + "\" doesn't seem to exist. Try rewording your search.");
-            console.log("For more information, you can find the error logs in logs.txt.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            var liri = "Liri Says: I'm sorry, \"" + theBandSearch + "\" doesn't seem to exist. Try rewording your search.";
+
+            responsesArray.push(newlineDivider);
+            responsesArray.push(liri);
+            responsesArray.push(moreInfo);
+            responsesArray.push(divider);
+
+            printToFile();
+
+            console.log(newlineDivider);
+            console.log(liri);
+            console.log(moreInfo);
+            console.log(divider);
+
             // If the band does exist in the Bands in Town database...
         } else {
             // Search for their events using their band name.
@@ -107,21 +132,44 @@ function concertThis(theBandSearch) {
 function formatConcertData(theEvents, theBandName) {
     // Bands in Town couldn't find a band...
     if (theEvents === "\n{warn=Not found}\n") {
-        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: I'm sorry, I couldn't find \"" + theBandName + "\". Try again.");
-        console.log("For more information, you can find the error logs in logs.txt.");
-        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        var liri = "Liri Says: I'm sorry, I couldn't find \"" + theBandName + "\". Try again.";
+
+        responsesArray.push(newlineDivider);
+        responsesArray.push(liri);
+        responsesArray.push(moreInfo);
+        responsesArray.push(divider);
+
+        printToFile();
+
+        console.log(newlineDivider);
+        console.log(liri);
+        console.log(moreInfo);
+        console.log(divider);
+
         // If Bands in Town doesn't have any events for a band...
     } else if (theEvents.length < 1) {
-        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: " + theBandName + " doesn't have any upcoming events!");
-        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        var liri = "Liri Says: " + theBandName + " doesn't have any upcoming events!";
+
+        responsesArray.push(newlineDivider);
+        responsesArray.push(liri);
+        responsesArray.push(divider);
+
+        printToFile();
+
+        console.log(newlineDivider);
+        console.log(liri);
+        console.log(divider);
+
         // If we received a response with data from Bands in Town...
     } else {
-        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        responsesArray.push(doubleNewlineDivider);
+        responsesArray.push("Upcoming events for " + theBandName + ":");
+        console.log(doubleNewlineDivider);
         console.log("Upcoming events for " + theBandName + ":");
         for (var i = 0; i < theEvents.length; i++) {
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+            responsesArray.push(doubleNewlineDivider);
+            responsesArray.push("Venue Name: " + theEvents[i].venue.name);
+            console.log(doubleNewlineDivider);
             console.log("Venue Name: " + theEvents[i].venue.name);
             var location = theEvents[i].venue.city;
             // If the venue has a region, add it to the location. Otherwise, omit it because it is just ''.
@@ -129,10 +177,15 @@ function formatConcertData(theEvents, theBandName) {
                 location += ", " + theEvents[i].venue.region;
             }
             location += ", " + theEvents[i].venue.country;
+            responsesArray.push("Venue Location: " + location);
+            responsesArray.push("Event Time: " + moment(theEvents[i].datetime).format('MM/DD/YYYY'));
             console.log("Venue Location: " + location);
             console.log("Event Time: " + moment(theEvents[i].datetime).format('MM/DD/YYYY'));
         }
-        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        responsesArray.push(newlineDivider);
+        console.log(newlineDivider);
+
+        printToFile();
     }
 }
 
@@ -144,12 +197,21 @@ function spotifyThis(theSongSearch) {
     }, function (err, response) {
         // If we receive an error from the Spotify API...
         if (err) {
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: Hmmmm, there's something wrong with that search. Try again.");
-            console.log("For more information, you can find the error logs in logs.txt.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            // ********* Send this to log.txt *************
-            return console.log(err);
+            var liri = "Liri Says: Hmmmm, there's something wrong with that search. Try again.";
+
+            responsesArray.push(newlineDivider);
+            responsesArray.push(liri);
+            responsesArray.push(moreInfo);
+            responsesArray.push(divider);
+
+            printToFile();
+
+            console.log(newlineDivider);
+            console.log(liri);
+            console.log(moreInfo);
+            console.log(divider);
+
+            return responsesArray.push(err);
         }
         formatSpotifyData(response.tracks.items, theSongSearch);
     });
@@ -159,27 +221,47 @@ function spotifyThis(theSongSearch) {
 function formatSpotifyData(theSongs, theSongQuery) {
     // If Spotify couldn't find any songs with the search...
     if (theSongs.length < 1) {
+        var liri = "Liri Says: \"" + theSongQuery + "\" didn't result in any songs from Spotify!";
+
+        responsesArray.push(newlineDivider);
+        responsesArray.push(liri);
+        responsesArray.push("You should try listening to \"The Sign\" by Ace of Base.");
+        responsesArray.push(divider);
+
+        printToFile();
+
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: \"" + theSongQuery + "\" didn't result in any songs from Spotify!");
+        console.log(liri);
         console.log("You should try listening to \"The Sign\" by Ace of Base.");
         console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         // If we received a response with data from Spotify...
     } else {
+        responsesArray.push(doubleNewlineDivider);
+        responsesArray.push("Results for your search, \"" + theSongQuery + "\":");
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         console.log("Results for your search, \"" + theSongQuery + "\":");
         for (var i = 0; i < theSongs.length; i++) {
+            responsesArray.push(doubleNewlineDivider);
+            responsesArray.push("Song Name: " + theSongs[i].name);
+            responsesArray.push("Artist: " + theSongs[i].artists[0].name);
+            responsesArray.push("Album: " + theSongs[i].album.name);
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
             console.log("Song Name: " + theSongs[i].name);
             console.log("Artist: " + theSongs[i].artists[0].name);
             console.log("Album: " + theSongs[i].album.name);
             // If there is no preview link available...
             if (theSongs[i].preview_url === null) {
+                responsesArray.push("Preview Link: No preview available on Spotify.");
                 console.log("Preview Link: No preview available on Spotify.");
             } else {
+                responsesArray.push("Preview Link: " + theSongs[i].preview_url);
                 console.log("Preview Link: " + theSongs[i].preview_url);
             }
         }
+        responsesArray.push(doubleNewlineDivider);
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+
+        printToFile();
     }
 }
 
@@ -211,15 +293,34 @@ function formatMovieData(theMovie, theMovieQuery) {
     if (theMovie.Response === "False") {
         // If the error was that the moview was not found...
         if (theMovie.Error === "Movie not found!") {
+            var liri = "Liri Says: \"" + theMovieQuery + "\" didn't result in any movies from OMDB!";
+
+            responsesArray.push(newlineDivider);
+            responsesArray.push(liri);
+            responsesArray.push("Try rewording your search.");
+            responsesArray.push(divider);
+
+            printToFile();
+
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: \"" + theMovieQuery + "\" didn't result in any movies from OMDB!");
+            console.log(liri);
             console.log("Try rewording your search.");
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
             // If there was some other error...
         } else {
+            var liri = "Liri Says: \"" + theMovieQuery + "\" resulted in an error from OMDB.";
+
+            responsesArray.push(newlineDivider);
+            responsesArray.push(liri);
+            responsesArray.push("Try rewording your search. " + moreInfo);
+            responsesArray.push(divider);
+
+            printToFile();
+
             console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: \"" + theMovieQuery + "\" resulted in an error from OMDB.");
-            console.log("Try rewording your search. For more information, you can find the error logs in logs.txt.");
+            console.log(liri);
+            console.log("Try rewording your search. " + moreInfo);
             console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         }
         // If we received a "True" response from OMDB...
@@ -239,29 +340,47 @@ function formatMovieData(theMovie, theMovieQuery) {
         }
 
         // Console log the response from Liri
+        responsesArray.push(doubleNewlineDivider);
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
         if (theMovieQuery === undefined) {
+            responsesArray.push("Liri Says: You didn't search for a movie title, so here's a suggestion...");
             console.log("Liri Says: You didn't search for a movie title, so here's a suggestion...");
         } else {
+            responsesArray.push("Result for your search, \"" + theMovieQuery + "\":");
             console.log("Result for your search, \"" + theMovieQuery + "\":");
         }
+        responsesArray.push(doubleNewlineDivider);
         console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
         // Console log the movie information
+        responsesArray.push("Title: " + theMovie.Title);
+        responsesArray.push("Release Year: " + theMovie.Year);
         console.log("Title: " + theMovie.Title);
         console.log("Release Year: " + theMovie.Year);
         // If the IMDB rating was not found...
         if (imdb === undefined) {
+            responsesArray.push("IMDB Rating: No rating was found.");
             console.log("IMDB Rating: No rating was found.");
         } else {
+            responsesArray.push("IMDB Rating: " + imdb);
             console.log("IMDB Rating: " + imdb);
         }
         // If the Rotten Tomatoes rating was not found...
         if (rottenTomatoes === undefined) {
+            responsesArray.push("Rotten Tomatoes Rating: No rating was found.");
             console.log("Rotten Tomatoes Rating: No rating was found.");
         } else {
+            responsesArray.push("Rotten Tomatoes Rating: " + rottenTomatoes);
             console.log("Rotten Tomatoes Rating: " + rottenTomatoes);
         }
+        responsesArray.push("Produced In: " + theMovie.Country);
+        responsesArray.push("Language(s): " + theMovie.Language);
+        responsesArray.push("Plot: " + theMovie.Plot);
+        responsesArray.push("Actor(s): " + theMovie.Actors);
+        responsesArray.push(newlineDivider);
+
+        printToFile();
+
         console.log("Produced In: " + theMovie.Country);
         console.log("Language(s): " + theMovie.Language);
         console.log("Plot: " + theMovie.Plot);
@@ -296,41 +415,77 @@ function axiosError(error) {
     // The request was made and the server responded with a status code that falls out of the range of 2xx.
     if (error.response) {
         if (error.response.status === 404) {
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, I couldn't find \"" + searchQuery + "\". Try again.");
-            console.log("For more information, you can find the error logs in logs.txt.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            var liri = "Liri Says: I'm sorry, I couldn't find \"" + searchQuery + "\". Try again.";
+
+            responsesArray.push(newlineDivider);
+            responsesArray.push(liri);
+            responsesArray.push(moreInfo);
+            responsesArray.push(divider);
+
+            console.log(newlineDivider);
+            console.log(liri);
+            console.log(moreInfo);
+            console.log(divider);
         } else {
-            console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            console.log("Liri Says: I'm sorry, but the search returned a bad status code. Try again or reword your search.");
-            console.log("For more information, you can find the error logs in logs.txt.");
-            console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            var liri = "Liri Says: I'm sorry, but the search, returned a bad status code. Try again or reword your search.";
+
+            responsesArray.push(newlineDivider);
+            responsesArray.push(liri);
+            responsesArray.push(moreInfo);
+            responsesArray.push(divider);
+
+            console.log(newlineDivider);
+            console.log(liri);
+            console.log(moreInfo);
+            console.log(divider);
         }
 
-        // console.log(error.response.data);
-        // console.log(error.response.status);
-        // console.log(error.response.headers);
+        responsesArray.push(error.response.data);
+        responsesArray.push(error.response.status);
+        responsesArray.push(error.response.headers);
 
         // The request was made but no response was received `error.request` is an instance of XMLHttpRequest in 
         // the browser and an instance of http.ClientRequest in node.js
     } else if (error.request) {
-        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: I'm sorry, it looks like the API I tried to use is unreachable. Try again later.");
-        console.log("For more information, you can find the error logs in logs.txt.");
-        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        var liri = "Liri Says: I'm sorry, it looks like the API I tried to use is unreachable. Try again later.";
 
-        // console.log(error.request);
+        responsesArray.push(newlineDivider);
+        responsesArray.push(liri);
+        responsesArray.push(moreInfo);
+        responsesArray.push(divider);
+
+        console.log(newlineDivider);
+        console.log(liri);
+        console.log(moreInfo);
+        console.log(divider);
+
+        responsesArray.push(error.request);
 
         // Something happened in setting up the request that triggered an Error
     } else {
-        console.log("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        console.log("Liri Says: Hmmmm, there's something wrong with that search. Perhaps try rewording it?");
-        console.log("For more information, you can find the error logs in logs.txt.");
-        console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        var liri = "Liri Says: Hmmmm, there's something wrong with that search. Perhaps try rewording it?";
 
-        // console.log('Error', error.message);
+        responsesArray.push(newlineDivider);
+        responsesArray.push(liri);
+        responsesArray.push(moreInfo);
+        responsesArray.push(divider);
+
+        console.log(newlineDivider);
+        console.log(liri);
+        console.log(moreInfo);
+        console.log(divider);
+        
+        responsesArray.push("Error " + error.message);
     }
-    // console.log(error.config);
+    responsesArray.push(error.config);
+    printToFile();
+}
+
+function printToFile() {
+    var string = responsesArray.join("\n");
+    fs.appendFile("logs.txt", string, (err) => {
+        if (err) throw err;
+    })
 }
 
 doCommand(command, searchQuery);
